@@ -1,0 +1,12 @@
+[package]
+name = "jtd-infer"
+version = "0.1.0"
+authors = ["Ulysse Carion <ulysse@segment.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.33"
+jtd = "0.1.4"
+serde_json = "1"
+failure = "0.1"
+chrono = "0.4"
