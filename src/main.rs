@@ -1,6 +1,6 @@
 use clap::{App, AppSettings, Arg};
 use failure::Error;
-use jtd_infer::{Hints, InferredSchema};
+use jtd_infer::{HintSet, Hints, InferredSchema};
 use serde_json::Deserializer;
 use std::fs::File;
 use std::io::stdin;
@@ -50,10 +50,11 @@ fn main() -> Result<(), Error> {
         .map(parse_json_pointer)
         .collect();
 
-    let value_hint_slices = values_hints.iter().map(|p| &p[..]).collect();
-    let discriminator_hint_slices = discriminator_hints.iter().map(|p| &p[..]).collect();
+    let hints = Hints::new(
+        HintSet::new(values_hints.iter().map(|p| &p[..]).collect()),
+        HintSet::new(discriminator_hints.iter().map(|p| &p[..]).collect()),
+    );
 
-    let hints = Hints::new(value_hint_slices, discriminator_hint_slices);
     let mut inference = InferredSchema::Unknown;
 
     let stream = Deserializer::from_reader(reader);

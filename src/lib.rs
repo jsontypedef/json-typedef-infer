@@ -1,6 +1,36 @@
-mod hints;
+mod hint_set;
 
-pub use hints::Hints;
+pub use hint_set::HintSet;
+
+#[derive(Debug)]
+pub struct Hints<'a> {
+    values: HintSet<'a>,
+    discriminator: HintSet<'a>,
+}
+
+impl<'a> Hints<'a> {
+    pub fn new(values: HintSet<'a>, discriminator: HintSet<'a>) -> Self {
+        Hints {
+            values,
+            discriminator,
+        }
+    }
+
+    fn sub_hints(&self, key: &str) -> Self {
+        Self::new(
+            self.values.sub_hints(key),
+            self.discriminator.sub_hints(key),
+        )
+    }
+
+    fn is_values_active(&self) -> bool {
+        self.values.is_active()
+    }
+
+    fn peek_active_discriminator(&self) -> Option<&str> {
+        self.discriminator.peek_active()
+    }
+}
 
 use chrono::DateTime;
 use jtd::form::{self, TypeValue};
@@ -69,25 +99,41 @@ impl InferredSchema {
 
                 InferredSchema::Array(Box::new(sub_infer))
             }
-            (InferredSchema::Unknown, Value::Object(obj)) => {
+            (InferredSchema::Unknown, Value::Object(mut obj)) => {
                 if hints.is_values_active() {
                     let mut sub_infer = InferredSchema::Unknown;
                     for (k, v) in obj {
                         sub_infer = sub_infer.infer(v, &hints.sub_hints(&k));
                     }
 
-                    InferredSchema::Values(Box::new(sub_infer))
-                } else {
-                    let mut props = HashMap::new();
-                    for (k, v) in obj {
-                        let sub_infer = InferredSchema::Unknown.infer(v, &hints.sub_hints(&k));
-                        props.insert(k, sub_infer);
-                    }
+                    return InferredSchema::Values(Box::new(sub_infer));
+                }
 
-                    InferredSchema::Properties {
-                        required: props,
-                        optional: HashMap::new(),
+                if let Some(discriminator) = hints.peek_active_discriminator() {
+                    if let Some(Value::String(mapping_key)) = obj.remove(discriminator) {
+                        let infer_rest = InferredSchema::Unknown.infer(Value::Object(obj), hints);
+
+                        dbg!("infer rest", &discriminator, &infer_rest);
+
+                        let mut mapping = HashMap::new();
+                        mapping.insert(mapping_key.to_owned(), infer_rest);
+
+                        return InferredSchema::Discriminator {
+                            discriminator: discriminator.to_owned(),
+                            mapping,
+                        };
                     }
+                }
+
+                let mut props = HashMap::new();
+                for (k, v) in obj {
+                    let sub_infer = InferredSchema::Unknown.infer(v, &hints.sub_hints(&k));
+                    props.insert(k, sub_infer);
+                }
+
+                InferredSchema::Properties {
+                    required: props,
+                    optional: HashMap::new(),
                 }
             }
             (InferredSchema::Any, _) => InferredSchema::Any,
@@ -198,7 +244,35 @@ impl InferredSchema {
 
                 return InferredSchema::Values(Box::new(sub_infer));
             }
-            _ => unimplemented!(),
+            (InferredSchema::Values(_), _) => InferredSchema::Any,
+            (
+                InferredSchema::Discriminator {
+                    discriminator,
+                    mut mapping,
+                },
+                Value::Object(mut obj),
+            ) => {
+                let mapping_key = obj.remove(&discriminator);
+                if let Some(Value::String(mapping_key_str)) = mapping_key {
+                    if !mapping.contains_key(&mapping_key_str) {
+                        mapping.insert(mapping_key_str.clone(), InferredSchema::Unknown);
+                    }
+
+                    let sub_infer = mapping
+                        .remove(&mapping_key_str)
+                        .unwrap()
+                        .infer(Value::Object(obj), hints);
+                    mapping.insert(mapping_key_str, sub_infer);
+
+                    InferredSchema::Discriminator {
+                        discriminator,
+                        mapping,
+                    }
+                } else {
+                    InferredSchema::Any
+                }
+            }
+            (InferredSchema::Discriminator { .. }, _) => InferredSchema::Any,
         }
     }
 
