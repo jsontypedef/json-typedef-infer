@@ -413,6 +413,10 @@ impl InferredSchema {
 
 fn minimum_number_type(n: serde_json::Number) -> InferredSchema {
     let n = n.as_f64().unwrap();
+    if n.fract() != 0.0 {
+        return InferredSchema::Float64;
+    }
+
     if n >= 0.0 && n <= 255.0 {
         InferredSchema::Uint8
     } else if n >= -128.0 && n <= 127.0 {
