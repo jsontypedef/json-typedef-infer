@@ -1,16 +1,19 @@
 mod hint_set;
 
 pub use hint_set::HintSet;
+use std::collections::HashSet;
 
 #[derive(Debug)]
 pub struct Hints<'a> {
+    enums: HintSet<'a>,
     values: HintSet<'a>,
     discriminator: HintSet<'a>,
 }
 
 impl<'a> Hints<'a> {
-    pub fn new(values: HintSet<'a>, discriminator: HintSet<'a>) -> Self {
+    pub fn new(enums: HintSet<'a>, values: HintSet<'a>, discriminator: HintSet<'a>) -> Self {
         Hints {
+            enums,
             values,
             discriminator,
         }
@@ -18,9 +21,14 @@ impl<'a> Hints<'a> {
 
     fn sub_hints(&self, key: &str) -> Self {
         Self::new(
+            self.enums.sub_hints(key),
             self.values.sub_hints(key),
             self.discriminator.sub_hints(key),
         )
+    }
+
+    fn is_enum_active(&self) -> bool {
+        self.enums.is_active()
     }
 
     fn is_values_active(&self) -> bool {
@@ -52,6 +60,7 @@ pub enum InferredSchema {
     Float64,
     String,
     Timestamp,
+    Enum(HashSet<String>),
     Array(Box<InferredSchema>),
     Properties {
         required: HashMap<String, InferredSchema>,
@@ -85,7 +94,12 @@ impl InferredSchema {
             (InferredSchema::Unknown, Value::Bool(_)) => InferredSchema::Bool,
             (InferredSchema::Unknown, Value::Number(n)) => minimum_number_type(n),
             (InferredSchema::Unknown, Value::String(s)) => {
-                if DateTime::parse_from_rfc3339(&s).is_ok() {
+                if hints.is_enum_active() {
+                    let mut values = HashSet::new();
+                    values.insert(s);
+
+                    InferredSchema::Enum(values)
+                } else if DateTime::parse_from_rfc3339(&s).is_ok() {
                     InferredSchema::Timestamp
                 } else {
                     InferredSchema::String
@@ -112,8 +126,6 @@ impl InferredSchema {
                 if let Some(discriminator) = hints.peek_active_discriminator() {
                     if let Some(Value::String(mapping_key)) = obj.remove(discriminator) {
                         let infer_rest = InferredSchema::Unknown.infer(Value::Object(obj), hints);
-
-                        dbg!("infer rest", &discriminator, &infer_rest);
 
                         let mut mapping = HashMap::new();
                         mapping.insert(mapping_key.to_owned(), infer_rest);
@@ -193,6 +205,11 @@ impl InferredSchema {
             (InferredSchema::Timestamp, _) => InferredSchema::Any,
             (InferredSchema::String, Value::String(_)) => InferredSchema::String,
             (InferredSchema::String, _) => InferredSchema::Any,
+            (InferredSchema::Enum(mut values), Value::String(s)) => {
+                values.insert(s);
+                InferredSchema::Enum(values)
+            }
+            (InferredSchema::Enum(_), _) => InferredSchema::Any,
             (InferredSchema::Array(prior), Value::Array(vals)) => {
                 let mut sub_infer = *prior;
                 for (i, v) in vals.into_iter().enumerate() {
@@ -319,6 +336,10 @@ impl InferredSchema {
             InferredSchema::Timestamp => Form::Type(form::Type {
                 nullable: false,
                 type_value: TypeValue::Timestamp,
+            }),
+            InferredSchema::Enum(values) => Form::Enum(form::Enum {
+                nullable: false,
+                values,
             }),
             InferredSchema::Array(sub_infer) => Form::Elements(form::Elements {
                 nullable: false,

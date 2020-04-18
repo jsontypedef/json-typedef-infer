@@ -1,4 +1,4 @@
-use clap::{App, AppSettings, Arg};
+use clap::{crate_version, App, AppSettings, Arg};
 use failure::Error;
 use jtd_infer::{HintSet, Hints, InferredSchema};
 use serde_json::Deserializer;
@@ -9,13 +9,20 @@ use std::io::Read;
 
 fn main() -> Result<(), Error> {
     let matches = App::new("jtd-infer")
-        .version("0.1.0")
-        .about("Infers a JSON Type Definition schema from lines of JSON")
+    .version(crate_version!())
+    .about("Infers a JSON Type Definition schema from lines of JSON")
         .setting(AppSettings::ColoredHelp)
         .arg(
             Arg::with_name("INPUT")
                 .help("Where to read examples from. Dash (hypen) indicates stdin")
                 .default_value("-"),
+        )
+        .arg(
+            Arg::with_name("enum-hint")
+                .help("Advise the inferrer that the given path points to an enum. If this hint is proven wrong, a type form will be emitted instead. This flag can be provided multiple times.")
+                .multiple(true)
+                .number_of_values(1)
+                .long("enum-hint"),
         )
         .arg(
             Arg::with_name("values-hint")
@@ -38,6 +45,12 @@ fn main() -> Result<(), Error> {
         file @ _ => Box::new(File::open(file)?) as Box<dyn Read>,
     });
 
+    let enum_hints: Vec<Vec<_>> = matches
+        .values_of("enum-hint")
+        .unwrap_or_default()
+        .map(parse_json_pointer)
+        .collect();
+
     let values_hints: Vec<Vec<_>> = matches
         .values_of("values-hint")
         .unwrap_or_default()
@@ -51,6 +64,7 @@ fn main() -> Result<(), Error> {
         .collect();
 
     let hints = Hints::new(
+        HintSet::new(enum_hints.iter().map(|p| &p[..]).collect()),
         HintSet::new(values_hints.iter().map(|p| &p[..]).collect()),
         HintSet::new(discriminator_hints.iter().map(|p| &p[..]).collect()),
     );
