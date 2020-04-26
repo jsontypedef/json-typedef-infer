@@ -1,5 +1,6 @@
 [package]
 name = "jtd-infer"
+description = "Generate JSON Typedef schemas from example data"
 version = "0.1.0"
 authors = ["Ulysse Carion <ulysse@segment.com>"]
 edition = "2018"
