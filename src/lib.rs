@@ -1,6 +1,11 @@
 mod hint_set;
 
+use chrono::DateTime;
 pub use hint_set::HintSet;
+use jtd::form::{self, TypeValue};
+use jtd::{Form, Schema};
+use serde_json::Value;
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 #[derive(Debug)]
@@ -39,12 +44,6 @@ impl<'a> Hints<'a> {
         self.discriminator.peek_active()
     }
 }
-
-use chrono::DateTime;
-use jtd::form::{self, TypeValue};
-use jtd::{Form, Schema};
-use serde_json::Value;
-use std::collections::HashMap;
 
 #[derive(Debug)]
 pub enum InferredSchema {

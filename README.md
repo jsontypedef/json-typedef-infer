@@ -1,30 +1,64 @@
 # jtd-infer
 
-`jtd-infer` generates a JSON Typedef schema from example data.
+`jtd-infer` generates ("infers") a JSON Typedef schema from example data.
 
-For high-level guidance on how to use this package, see ["Inferring a JSON
-Typedef Schema from Real Data"][jtd-jtd-infer] in the JSON Typedef docs.
+```bash
+echo '{ "name": "Joe", "age": 42 }' | jtd-infer | jq
+```
+
+```json
+{
+  "properties": {
+    "age": {
+      "type": "uint8"
+    },
+    "name": {
+      "type": "string"
+    }
+  }
+}
+```
 
 ## Installation
 
 To install `jtd-infer`, you have a few options:
 
-### Install with Homebrew
+### Install on macOS
 
-This option is recommended if you're on macOS.
+You can install `jtd-infer` via Homebrew:
 
 ```bash
 brew install jsontypedef/jsontypedef/jtd-infer
 ```
 
-### Install with Docker
-
-This option is recommended on non-Mac platforms, or if you're running
-`jtd-infer` in some sort of script and you want to make sure that everyone
-running the script uses the same version of `jtd-infer`.
+Alternatively, you can download and extract the binary yourself from
+`x86_64-apple-darwin.zip` in [the latest release][latest]. Because of Apple's
+quarantine system, you will need to run:
 
 ```bash
-docker pull jsontypedef/jtd-tools
+xattr -d com.apple.quarantine path/to/jtd-infer
+```
+
+In order to be able to run the executable.
+
+### Install on Linux
+
+Download and extract the binary from `x86_64-unknown-linux-gnu.zip` in [the
+latest release][latest].
+
+### Install on Windows
+
+Download and extract the binary from `x86_64-pc-windows-gnu.zip` in [the latest
+release][latest]. Runs on 64-bit MinGW for Windows 7+.
+
+### Install with Docker
+
+This option is recommended if you're running `jtd-infer` in some sort of script
+and you want to make sure that everyone running the script uses the same version
+of `jtd-infer`.
+
+```bash
+docker pull jsontypedef/jtd-infer
 ```
 
 If you opt to use the Docker approach, you will need to change all invocations
@@ -37,22 +71,21 @@ jtd-infer [...]
 To:
 
 ```bash
-docker exec -it jsontypedef/jtd-tools /jtd-infer [...]
-```
+# To have jtd-infer read from STDIN, run it like so:
+docker exec -i jsontypedef/jtd-infer [...]
 
-### Install with Cargo
-
-This option is recommended if you already have `cargo` installed, or if you
-would prefer to use a version of `jtd-infer` compiled on your machine:
-
-```bash
-cargo install jtd-infer
+# To have jtd-infer read from a file, run it as:
+docker run -v /path/to/file.json:/file.json -i jsontypedef/jtd-infer [...] file.json
+# or, if file.json is in your current directory:
+docker run -v $(pwd)/file.json:/file.json -i jsontypedef/jtd-infer [...] file.json
 ```
 
 ## Usage
 
-> See the top of this README for links to high-level guidance on how to use
-> `jtd-infer`.
+For high-level guidance on how to use `jtd-infer`, see ["Inferring a JSON
+Typedef Schema from Real Data"][jtd-jtd-infer] in the JSON Typedef website docs.
+
+### Basic Usage
 
 To invoke `jtd-infer`, you can either:
 
@@ -60,8 +93,8 @@ To invoke `jtd-infer`, you can either:
 2. Have it read from a file. To do this, pass a file name as the last argument
    to `jtd-infer`.
 
-`jtd-infer` can read a _sequence_ of JSON messages. So for example, if you have
-a file like this in `data.json`:
+`jtd-infer` reads a _sequence_ of JSON messages. So for example, if you have a
+file like this in `data.json`:
 
 ```json
 { "name": "john doe", "age": 42 }
@@ -82,7 +115,7 @@ In both cases, you'd get this output:
 {"properties":{"name":{"type":"string"},"age":{"type":"uint8"}}}
 ```
 
-## Advanced Usage: Providing Hints
+### Advanced Usage: Providing Hints
 
 By default, `jtd-infer` will never output `enum`, `values`, or `discriminator`
 schemas. This is by design: by always being consistent with what it outputs,
@@ -102,7 +135,7 @@ As a corner-case, if you want to point to the *root* / top-level of your input,
 then use the empty string as the path. See ["Using
 `--values-hint`"](##using---values-hint) for an example of this.
 
-### Using `--enum-hint`
+#### Using `--enum-hint`
 
 By default, strings are always inferred to be `{ "type": "string" }`:
 
@@ -126,7 +159,7 @@ echo '["foo", "bar", "baz"]' | jtd-infer --enum-hint=/-
 {"elements":{"enum":["bar","baz","foo"]}}
 ```
 
-### Using `--values-hint`
+#### Using `--values-hint`
 
 By default, objects are always assumed to be "structs", and `jtd-infer` will
 generate `properties` / `optionalProperties`. For example:
@@ -151,7 +184,7 @@ echo '{"x": [1, 2, 3], "y": [4, 5, 6], "z": [7, 8, 9]}' | jtd-infer --values-hin
 {"values":{"elements":{"type":"uint8"}}}
 ```
 
-### Using `--discriminator-hint`
+#### Using `--discriminator-hint`
 
 By default, objects are always assumed to be "structs", and `jtd-infer` will
 generate `properties` / `optionalProperties`. For example:
@@ -197,3 +230,4 @@ echo '[{"type": "s", "value": "foo"},{"type": "n", "value": 3.14}]' | jtd-infer 
 ```
 
 [jtd-jtd-infer]: https://jsontypedef.com/docs/tools/jtd-infer
+[latest]: https://github.com/jsontypedef/json-typedef-infer/releases/latest
