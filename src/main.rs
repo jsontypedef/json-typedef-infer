@@ -1,4 +1,4 @@
-use clap::{crate_version, load_yaml, App, AppSettings, Arg};
+use clap::{crate_version, load_yaml, App, AppSettings};
 use failure::Error;
 use jtd_infer::{HintSet, Hints, InferredSchema};
 use serde_json::Deserializer;
