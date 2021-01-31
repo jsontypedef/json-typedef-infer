@@ -1,4 +1,4 @@
-use clap::{crate_version, App, AppSettings, Arg};
+use clap::{crate_version, load_yaml, App, AppSettings, Arg};
 use failure::Error;
 use jtd_infer::{HintSet, Hints, InferredSchema};
 use serde_json::Deserializer;
@@ -8,39 +8,13 @@ use std::io::BufReader;
 use std::io::Read;
 
 fn main() -> Result<(), Error> {
-    let matches = App::new("jtd-infer")
-    .version(crate_version!())
-    .about("Infers a JSON Type Definition schema from lines of JSON")
+    let cli_yaml = load_yaml!("cli.yaml");
+    let matches = App::from(cli_yaml)
         .setting(AppSettings::ColoredHelp)
-        .arg(
-            Arg::with_name("INPUT")
-                .help("Where to read examples from. Dash (hypen) indicates stdin")
-                .default_value("-"),
-        )
-        .arg(
-            Arg::with_name("enum-hint")
-                .help("Advise the inferrer that the given path points to an enum. If this hint is proven wrong, a type form will be emitted instead. This flag can be provided multiple times.")
-                .multiple(true)
-                .number_of_values(1)
-                .long("enum-hint"),
-        )
-        .arg(
-            Arg::with_name("values-hint")
-                .help("Advise the inferrer that the given path points to a values form. If this hint is proven wrong, a properties form will be emitted instead. This flag can be provided multiple times.")
-                .multiple(true)
-                .number_of_values(1)
-                .long("values-hint"),
-        )
-        .arg(
-            Arg::with_name("discriminator-hint")
-                .help("Advise the inferrer that the given path points to a discriminator. If this hint is proven wrong, an empty form will be emitted instead. This flag can be provided multiple times.")
-                .multiple(true)
-                .number_of_values(1)
-                .long("discriminator-hint"),
-        )
+        .version(crate_version!())
         .get_matches();
 
-    let reader = BufReader::new(match matches.value_of("INPUT").unwrap() {
+    let reader = BufReader::new(match matches.value_of("input").unwrap() {
         "-" => Box::new(stdin()) as Box<dyn Read>,
         file @ _ => Box::new(File::open(file)?) as Box<dyn Read>,
     });

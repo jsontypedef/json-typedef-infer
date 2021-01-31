@@ -7,7 +7,7 @@ authors = ["Ulysse Carion <ulysse@segment.com>"]
 edition = "2018"
 
 [dependencies]
-clap = "2.33"
+clap = { version = "2.33.3", features = ["yaml"] }
 jtd = "0.1.4"
 serde_json = "1"
 failure = "0.1"
