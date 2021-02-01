@@ -1,6 +1,13 @@
-# jtd-infer
+# jtd-infer: Generate JSON Typedef schemas from examples ![Crates.io](https://img.shields.io/crates/v/jtd_infer) ![Docs.rs](https://docs.rs/jtd_infer/badge.svg)
 
-`jtd-infer` generates ("infers") a JSON Typedef schema from example data.
+[JSON Type Definition](https://jsontypedef.com), aka
+[RFC8927](https://tools.ietf.org/html/rfc8927), is an easy-to-learn,
+standardized way to define a schema for JSON data. You can use JSON Typedef to
+portably validate data across programming languages, create dummy data, generate
+code, and more.
+
+`jtd-infer` is a tool that generates ("infers") a JSON Typedef schema from
+example data.
 
 ```bash
 echo '{ "name": "Joe", "age": 42 }' | jtd-infer | jq
@@ -21,63 +28,17 @@ echo '{ "name": "Joe", "age": 42 }' | jtd-infer | jq
 
 ## Installation
 
-To install `jtd-infer`, you have a few options:
-
-### Install on macOS
-
-You can install `jtd-infer` via Homebrew:
+On macOS, you can install `jtd-infer` via Homebrew:
 
 ```bash
 brew install jsontypedef/jsontypedef/jtd-infer
 ```
 
-Alternatively, you can download and extract the binary yourself from
-`x86_64-apple-darwin.zip` in [the latest release][latest]. Because of Apple's
-quarantine system, you will need to run:
+For all other platforms, you can download and extract the binary yourself from
+[the latest release][latest]. You can also install using `cargo` by running:
 
 ```bash
-xattr -d com.apple.quarantine path/to/jtd-infer
-```
-
-In order to be able to run the executable.
-
-### Install on Linux
-
-Download and extract the binary from `x86_64-unknown-linux-gnu.zip` in [the
-latest release][latest].
-
-### Install on Windows
-
-Download and extract the binary from `x86_64-pc-windows-gnu.zip` in [the latest
-release][latest]. Runs on 64-bit MinGW for Windows 7+.
-
-### Install with Docker
-
-This option is recommended if you're running `jtd-infer` in some sort of script
-and you want to make sure that everyone running the script uses the same version
-of `jtd-infer`.
-
-```bash
-docker pull jsontypedef/jtd-infer
-```
-
-If you opt to use the Docker approach, you will need to change all invocations
-of `jtd-infer` in this README from:
-
-```bash
-jtd-infer [...]
-```
-
-To:
-
-```bash
-# To have jtd-infer read from STDIN, run it like so:
-docker exec -i jsontypedef/jtd-infer [...]
-
-# To have jtd-infer read from a file, run it as:
-docker run -v /path/to/file.json:/file.json -i jsontypedef/jtd-infer [...] file.json
-# or, if file.json is in your current directory:
-docker run -v $(pwd)/file.json:/file.json -i jsontypedef/jtd-infer [...] file.json
+cargo install jtd_infer
 ```
 
 ## Usage
@@ -113,6 +74,69 @@ In both cases, you'd get this output:
 
 ```json
 {"properties":{"name":{"type":"string"},"age":{"type":"uint8"}}}
+```
+
+### Changing the default number type
+
+> ⚠️ This section is often important if you are retrofitting JSON Typedef to a
+> JavaScript-based application.
+
+By default, JSON Typedef will infer the most specific possible type for inputs.
+So, for example, it will guess `uint8` if it sees a `12` in your input:
+
+```bash
+echo "12" | jtd-infer
+```
+
+```json
+{"type":"uint8"}
+```
+
+However, if you're giving JSON Typedef a small sample set, or if you in practice
+have data that is far smaller than the actual numerical datatypes your
+application supports, then this behavior may be undesirable. For example, it's
+common for JavaScript-based applications to actually support `float64` for all
+numeric inputs, because JavaScript numbers are IEEE double-precision floats.
+
+To tell JSON Typedef to prefer a different type than the one it would normally
+guess, you can use `--default-number-type` to change its behavior. For example:
+
+```bash
+# JavaScript numbers are all float64s, and so it's pretty common for JavaScript
+# applications to not check if inputs are integers or within a particular range.
+#
+# If you don't want to make your JSON Typedef schema strict about decimal,
+# negative, or out of int range numbers, you can pass float64 as the default
+# number type.
+echo "12" | jtd-infer --default-number-type=float64
+```
+
+```json
+{"type":"float64"}
+```
+
+Another use-case is if you're writing an application that uses signed 32-bit
+ints everywhere, and your example data simply never in practice has examples of
+negative numbers or numbers too big for 8- or 16-bit numbers. You can achieve
+that by using `int32` as your default number type:
+
+```bash
+echo "12" | jtd-infer --default-number-type=int32
+```
+
+```json
+{"type":"int32"}
+```
+
+Note that `jtd-infer` will ignore your default if it doesn't match with the
+data. For example, `int32` only works with whole numbers, so if a decimal number
+or a number too big for 32-bit signed integers comes in, it will fall back to
+`float64`:
+
+```bash
+# both of these output {"type":"float64"}
+echo "3.14" | jtd-infer --default-number-type=int32
+echo "9999999999" | jtd-infer --default-number-type=int32
 ```
 
 ### Advanced Usage: Providing Hints
