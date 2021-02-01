@@ -1,6 +1,13 @@
-# jtd-infer
+# jtd-infer: Infer JSON Typedef schemas from examples ![Crates.io](https://img.shields.io/crates/v/jtd_infer) ![Docs.rs](https://docs.rs/jtd_infer/badge.svg)
 
-`jtd-infer` generates ("infers") a JSON Typedef schema from example data.
+[JSON Type Definition](https://jsontypedef.com), aka
+[RFC8927](https://tools.ietf.org/html/rfc8927), is an easy-to-learn,
+standardized way to define a schema for JSON data. You can use JSON Typedef to
+portably validate data across programming languages, create dummy data, generate
+code, and more.
+
+`jtd-infer` is a tool that generates ("infers") a JSON Typedef schema from
+example data.
 
 ```bash
 echo '{ "name": "Joe", "age": 42 }' | jtd-infer | jq
