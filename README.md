@@ -1,4 +1,4 @@
-# jtd-infer: Generate JSON Typedef schemas from examples [![Crates.io](https://img.shields.io/crates/v/jtd_infer)](https://crates.io/crates/jtd_infer) [![Docs.rs](https://docs.rs/jtd_infer/badge.svg)](https://docs.rs/jtd_infer)
+# jtd-infer: Generate JSON Typedef schemas from examples [![Crates.io](https://img.shields.io/crates/v/jtd_infer)](https://crates.io/crates/jtd_infer) [![Docs.rs](https://docs.rs/jtd-infer/badge.svg)](https://docs.rs/jtd_infer)
 
 [JSON Type Definition](https://jsontypedef.com), aka
 [RFC8927](https://tools.ietf.org/html/rfc8927), is an easy-to-learn,
