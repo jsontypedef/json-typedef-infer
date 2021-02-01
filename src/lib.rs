@@ -6,12 +6,10 @@
 //! create dummy data, generate code, and more.
 //!
 //! This Rust crate can generate a JSON Typedef schema from example data. If you
-//! are looking to use this package as a CLI tool, see:
-//!
-//! https://github.com/jsontypedef/json-typedef-infer
-//!
-//! The remainder of these docs are focused on this crate as a Rust library, and
-//! so focuses on the Rust API for using `jtd_fuzz`.
+//! are looking to use this package as a CLI tool, see [this crate's
+//! README](https://github.com/jsontypedef/json-typedef-infer). The remainder of
+//! these docs are focused on this crate as a Rust library, and so focuses on
+//! the Rust API for using `jtd_fuzz`.
 //!
 //! # Quick start
 //!
