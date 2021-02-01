@@ -1,6 +1,6 @@
+use anyhow::Error;
 use clap::{crate_version, load_yaml, App, AppSettings};
-use failure::Error;
-use jtd_infer::{HintSet, Hints, InferredSchema};
+use jtd_infer::{HintSet, Hints, Inferrer, NumType};
 use serde_json::Deserializer;
 use std::fs::File;
 use std::io::stdin;
@@ -37,20 +37,33 @@ fn main() -> Result<(), Error> {
         .map(parse_json_pointer)
         .collect();
 
+    let default_num_type = match matches.value_of("default-number-type").unwrap() {
+        "int8" => NumType::Int8,
+        "uint8" => NumType::Uint8,
+        "int16" => NumType::Int16,
+        "uint16" => NumType::Uint16,
+        "int32" => NumType::Int32,
+        "uint32" => NumType::Uint32,
+        "float32" => NumType::Float32,
+        "float64" => NumType::Float64,
+        _ => unreachable!(),
+    };
+
     let hints = Hints::new(
+        default_num_type,
         HintSet::new(enum_hints.iter().map(|p| &p[..]).collect()),
         HintSet::new(values_hints.iter().map(|p| &p[..]).collect()),
         HintSet::new(discriminator_hints.iter().map(|p| &p[..]).collect()),
     );
 
-    let mut inference = InferredSchema::Unknown;
+    let mut inferrer = Inferrer::new(hints);
 
     let stream = Deserializer::from_reader(reader);
     for value in stream.into_iter() {
-        inference = inference.infer(value?, &hints);
+        inferrer = inferrer.infer(value?);
     }
 
-    let serde_schema: jtd::SerdeSchema = inference.into_schema().into();
+    let serde_schema: jtd::SerdeSchema = inferrer.into_schema().into_serde_schema();
     println!("{}", serde_json::to_string(&serde_schema)?);
 
     Ok(())
