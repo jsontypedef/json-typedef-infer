@@ -1,5 +1,5 @@
 use anyhow::Error;
-use clap::{crate_version, load_yaml, App, AppSettings};
+use clap::{Parser, ValueEnum};
 use jtd_infer::{HintSet, Hints, Inferrer, NumType};
 use serde_json::Deserializer;
 use std::fs::File;
@@ -7,47 +7,69 @@ use std::io::stdin;
 use std::io::BufReader;
 use std::io::Read;
 
-fn main() -> Result<(), Error> {
-    let cli_yaml = load_yaml!("cli.yaml");
-    let matches = App::from(cli_yaml)
-        .setting(AppSettings::ColoredHelp)
-        .version(crate_version!())
-        .get_matches();
+#[derive(Parser)]
+#[command(name = "jtd-infer", version)]
+struct Cli {
+    /// Where to read examples from. To read from stdin, use "-"
+    #[arg(name = "input", required = true, default_value = "-")]
+    input: String,
 
-    let reader = BufReader::new(match matches.value_of("input").unwrap() {
+    /// The default type to infer for JSON numbers.
+    #[arg(name = "default-number-type", long, default_value = "uint8")]
+    default_number_type: DefaultNumType,
+
+    /// Treat a given part of the input as a discriminator "tag".
+    #[arg(name = "discriminator-hint", long)]
+    discriminator_hint: Vec<String>,
+
+    /// Treat a given part of the input as an enum.
+    #[arg(name = "enum-hint", long)]
+    enum_hint: Vec<String>,
+
+    /// Treat a given part of the input as a dictionary / map.
+    #[arg(name = "values-hint", long)]
+    values_hint: Vec<String>,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+enum DefaultNumType {
+    Int8,
+    Uint8,
+    Int16,
+    Uint16,
+    Int32,
+    Uint32,
+    Float32,
+    Float64,
+}
+
+fn main() -> Result<(), Error> {
+    let cli = Cli::parse();
+
+    let reader = BufReader::new(match cli.input.as_str() {
         "-" => Box::new(stdin()) as Box<dyn Read>,
         file @ _ => Box::new(File::open(file)?) as Box<dyn Read>,
     });
 
-    let enum_hints: Vec<Vec<_>> = matches
-        .values_of("enum-hint")
-        .unwrap_or_default()
+    let enum_hints: Vec<Vec<_>> = cli
+        .enum_hint
+        .iter()
+        .map(AsRef::as_ref)
         .map(parse_json_pointer)
         .collect();
-
-    let values_hints: Vec<Vec<_>> = matches
-        .values_of("values-hint")
-        .unwrap_or_default()
+    let values_hints: Vec<Vec<_>> = cli
+        .values_hint
+        .iter()
+        .map(AsRef::as_ref)
         .map(parse_json_pointer)
         .collect();
-
-    let discriminator_hints: Vec<Vec<_>> = matches
-        .values_of("discriminator-hint")
-        .unwrap_or_default()
+    let discriminator_hints: Vec<Vec<_>> = cli
+        .discriminator_hint
+        .iter()
+        .map(AsRef::as_ref)
         .map(parse_json_pointer)
         .collect();
-
-    let default_num_type = match matches.value_of("default-number-type").unwrap() {
-        "int8" => NumType::Int8,
-        "uint8" => NumType::Uint8,
-        "int16" => NumType::Int16,
-        "uint16" => NumType::Uint16,
-        "int32" => NumType::Int32,
-        "uint32" => NumType::Uint32,
-        "float32" => NumType::Float32,
-        "float64" => NumType::Float64,
-        _ => unreachable!(),
-    };
+    let default_num_type = cli.default_number_type.into();
 
     let hints = Hints::new(
         default_num_type,
@@ -79,5 +101,20 @@ fn parse_json_pointer(s: &str) -> Vec<String> {
             .skip(1)
             .map(String::from)
             .collect()
+    }
+}
+
+impl From<DefaultNumType> for NumType {
+    fn from(default_num_type: DefaultNumType) -> NumType {
+        match default_num_type {
+            DefaultNumType::Int8 => NumType::Int8,
+            DefaultNumType::Uint8 => NumType::Uint8,
+            DefaultNumType::Int16 => NumType::Int16,
+            DefaultNumType::Uint16 => NumType::Uint16,
+            DefaultNumType::Int32 => NumType::Int32,
+            DefaultNumType::Uint32 => NumType::Uint32,
+            DefaultNumType::Float32 => NumType::Float32,
+            DefaultNumType::Float64 => NumType::Float64,
+        }
     }
 }
