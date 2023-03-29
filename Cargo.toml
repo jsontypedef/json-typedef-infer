@@ -11,4 +11,4 @@ clap = { version = "4", features = ["derive"] }
 jtd = "0.3.1"
 serde_json = "1"
 anyhow = "1.0"
-chrono = "0.4"
+chrono = { version = "0.4", features = ["std", "clock", "wasmbind"], default-features = false }
