@@ -253,5 +253,5 @@ echo '[{"type": "s", "value": "foo"},{"type": "n", "value": 3.14}]' | jtd-infer 
 }
 ```
 
-[jtd-jtd-infer]: https://jsontypedef.com/docs/tools/jtd-infer
+[jtd-jtd-infer]: https://jsontypedef.com/docs/jtd-infer/
 [latest]: https://github.com/jsontypedef/json-typedef-infer/releases/latest
